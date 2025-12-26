@@ -1,34 +1,35 @@
 import { capitalizeFirstLetter } from "@/lib/utils";
-import { notFound } from "next/navigation";
+import { getPostsByCategory } from "@/lib/api/blog/search";
+import { notFound } from "next/navigation"
 
-export async function SearchNameById(userId: number) {
-  const res = await fetch(`https://dummyjson.com/users/${userId}`, { cache: 'no-store' });
-  const data = await res.json();
-  return data.firstName + ' ' + data.lastName;
-}
 
-export default async function CategoryNamePage({ params }: { params: { categoryName: string } }) {
+export default async function BlogCategoryPage({
+  params,
+}: {
+  params: Promise<{ categoryName: string }>;
+}) {
 
-  const res = await fetch(`https://dummyjson.com/posts/tag/${params.categoryName}`, { cache: 'no-store' });
-  if (!res.ok) {
-    notFound();
+  const { categoryName } = await params;
+
+  const categoryNameLower = categoryName.toLowerCase();
+
+  let postWithAuthor;
+
+  try {
+    postWithAuthor = await getPostsByCategory(categoryNameLower);
+  } catch {
+    return notFound();
   }
-
-  const data = await res.json();
-
-  const postWithAuthor = await Promise.all(
-    data.posts.map(async (post: any) => {
-      const authorName = await SearchNameById(post.userId);
-      return { ...post, authorName };
-    })
-  );
+  if (!postWithAuthor || postWithAuthor.length === 0) {
+    return notFound();
+  }
 
   return (
 
     <div className="container mx-auto p-10 flex-grow">
       <main className="grid grid-cols-1 md:grid-cols-[3fr_1fr] gap-8">
         <section className="space-y-6">
-          {postWithAuthor.map((posts: any) => (
+          {postWithAuthor.map((posts) => (
             <article key={posts.id} className="p-4">
               <h2 className="text-3xl font-bold mb-2">
                 {posts.title}
@@ -54,7 +55,7 @@ export default async function CategoryNamePage({ params }: { params: { categoryN
           <aside className="p-4">
             <h3 className=" text-2xl font-semibold mb-4">About Me</h3>
             <p>
-              Hi! I'm a passionate developer who loves writing about technology and programming. Follow my blog for the latest updates and tutorials.
+              {"Hi! I'm a passionate developer who loves writing about technology and programming. Follow my blog for the latest updates and tutorials."}
             </p>
           </aside>
         </section>
